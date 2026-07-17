@@ -45,7 +45,7 @@ public class PaymentIntentService {
         if (approved) {
             ledgerService.recordSuccess(paymentIntent);
         }
-        return paymentIntent;
+        return paymentIntentRepository.save(paymentIntent);
     }
 
     public Optional<PaymentIntent> find(UUID id) {
