@@ -1,0 +1,4 @@
+ledger:
+  idempotency:
+    claim-ttl-seconds: 30
+    result-ttl-hours: 24
