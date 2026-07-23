@@ -6,19 +6,12 @@ import com.pushya.ledger.domain.PaymentIntent;
 import com.pushya.ledger.domain.PaymentIntentStatus;
 import com.pushya.ledger.repository.LedgerEntryRepository;
 import com.pushya.ledger.repository.PaymentIntentRepository;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.DockerClientFactory;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -37,43 +30,48 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration test for idempotency behavior under concurrent load.
+ * Requires docker-compose services to be running:
+ *   docker compose up -d
+ * Then run:
+ *   ./mvnw verify -Pintegration
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
         "spring.flyway.enabled=true",
         "spring.jpa.hibernate.ddl-auto=none",
+        "spring.datasource.url=jdbc:postgresql://localhost:5432/ledger",
+        "spring.datasource.username=ledger",
+        "spring.datasource.password=ledger",
+        "spring.redis.host=localhost",
+        "spring.redis.port=6379",
         "ledger.idempotency.claim-ttl-seconds=30",
         "ledger.idempotency.result-ttl-hours=24"
 })
 class IdempotencyIntegrationTest {
 
-    static final boolean DOCKER_AVAILABLE = DockerClientFactory.instance().isDockerAvailable();
-    static PostgreSQLContainer<?> postgres;
-    static GenericContainer<?> redis;
-
-    static {
-        if (DOCKER_AVAILABLE) {
-            postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-                    .withDatabaseName("ledger")
-                    .withUsername("ledger")
-                    .withPassword("ledger");
-            redis = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
-            postgres.start();
-            redis.start();
-        }
-    }
-
     @BeforeAll
-    static void checkDocker() {
-        Assumptions.assumeTrue(DOCKER_AVAILABLE, "Docker is required for Testcontainers integration tests");
+    static void checkDockerCompose() {
+        // Check if docker-compose services are available
+        boolean postgresAvailable = isServiceAvailable("localhost", 5432);
+        boolean redisAvailable = isServiceAvailable("localhost", 6379);
+        
+        if (!postgresAvailable || !redisAvailable) {
+            throw new RuntimeException(
+                "Docker Compose services not available. Please run: docker compose up -d\n" +
+                "  Postgres available: " + postgresAvailable + "\n" +
+                "  Redis available: " + redisAvailable
+            );
+        }
     }
 
-    @AfterAll
-    static void stopContainers() {
-        if (postgres != null && postgres.isRunning()) {
-            postgres.stop();
-        }
-        if (redis != null && redis.isRunning()) {
-            redis.stop();
+    private static boolean isServiceAvailable(String host, int port) {
+        try (var socket = new java.net.Socket()) {
+            socket.connect(new java.net.InetSocketAddress(host, port), 1000);
+            return true;
+        } catch (Exception ignored) {
+            return false;
         }
     }
 
@@ -85,15 +83,6 @@ class IdempotencyIntegrationTest {
 
     @Autowired
     LedgerEntryRepository ledgerEntryRepository;
-
-    @DynamicPropertySource
-    static void overrideProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.redis.host", redis::getHost);
-        registry.add("spring.redis.port", () -> redis.getFirstMappedPort());
-    }
 
     @Test
     void fiftyConcurrentConfirms_settleExactlyOnce() throws Exception {

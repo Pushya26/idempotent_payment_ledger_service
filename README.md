@@ -9,14 +9,66 @@ This project implements a small payment-ledger backend in Java 21 and Spring Boo
 
 ## Local development
 
-1. Start Postgres and Redis with Docker Compose:
+### Running unit tests
+
+Unit tests do not require any external services:
+
+```bash
+./mvnw clean test
+```
+
+### Running integration tests
+
+Integration tests require Docker Compose services to be running. There are two ways to run them:
+
+**Option 1: Using the convenience script (recommended)**
+
+Linux/macOS:
+
+```bash
+bash run-integration-tests.sh
+```
+
+Windows:
+
+```bash
+run-integration-tests.bat
+```
+
+This script will:
+
+- Start Docker Compose services
+- Wait for services to be ready
+- Run integration tests with the `integration` Maven profile
+- Optionally stop services when complete
+
+**Option 2: Manual steps**
+
+1. Start Docker Compose services:
+
    ```bash
    docker compose up -d
    ```
-2. Run the application:
+
+2. Run integration tests:
+
    ```bash
-   ./mvnw spring-boot:run
+   ./mvnw verify -Pintegration
    ```
+
+3. Stop services when done:
+   ```bash
+   docker compose down
+   ```
+
+### Running the application with services
+
+```bash
+docker compose up -d
+./mvnw spring-boot:run
+```
+
+Services will be automatically detected via Spring Boot Docker Compose support.
 
 ## API example
 
