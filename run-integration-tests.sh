@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Idempotent Payment Ledger Service - Integration Test Runner
-# This script helps run integration tests with docker-compose
+# This script helps run integration tests with docker compose
 
 set -e
 
@@ -14,15 +14,15 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}=== Idempotent Payment Ledger - Integration Test Runner ===${NC}"
 echo
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null && ! command -v docker &> /dev/null; then
-    echo -e "${YELLOW}Warning: Docker not found. Integration tests require docker-compose.${NC}"
+# Check if docker compose is available
+if ! command -v docker compose &> /dev/null && ! command -v docker &> /dev/null; then
+    echo -e "${YELLOW}Warning: Docker not found. Integration tests require docker compose.${NC}"
     exit 1
 fi
 
-# Start docker-compose services
+# Start docker compose services
 echo -e "${BLUE}Starting Docker Compose services...${NC}"
-docker-compose up -d
+docker compose up -d
 
 # Wait for services to be ready
 echo -e "${BLUE}Waiting for services to be ready...${NC}"
@@ -59,7 +59,7 @@ read -p "Stop Docker Compose services? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${BLUE}Stopping Docker Compose services...${NC}"
-    docker-compose down
+    docker compose down
     echo -e "${GREEN}Services stopped.${NC}"
 fi
 

@@ -17,27 +17,36 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HexFormat;
+import com.pushya.ledger.observability.PaymentMetrics;
 
 @Component
 @Order(1)
 public class IdempotencyFilter extends OncePerRequestFilter {
     private final StringRedisTemplate redis;
+    private final PaymentMetrics metrics;
     private final Duration claimTtl;
     private final Duration resultTtl;
 
     public IdempotencyFilter(
             StringRedisTemplate redis,
+            PaymentMetrics metrics,
             @Value("${ledger.idempotency.claim-ttl-seconds:30}") long claimTtlSeconds,
             @Value("${ledger.idempotency.result-ttl-hours:24}") long resultTtlHours) {
         this.redis = redis;
+        this.metrics = metrics;
         this.claimTtl = Duration.ofSeconds(claimTtlSeconds);
         this.resultTtl = Duration.ofHours(resultTtlHours);
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !"POST".equalsIgnoreCase(request.getMethod())
-                || !request.getRequestURI().startsWith("/v1/payment_intents");
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+        String uri = request.getRequestURI();
+        // Only apply idempotency to action endpoints like /v1/payment_intents/{id}/confirm
+        // Skip the create endpoint: POST /v1/payment_intents (no trailing path segments after base)
+        return !uri.matches("/v1/payment_intents/[^/]+/.+");
     }
 
     @Override
@@ -69,20 +78,24 @@ public class IdempotencyFilter extends OncePerRequestFilter {
 
         String existingRaw = redis.opsForValue().get(redisKey);
         if (existingRaw == null) {
+            metrics.incrementIdempotencyConflict();
             writeJson(response, 409, "idempotency_conflict", "Retry the request.");
             return;
         }
 
         IdemRecord existing = decode(existingRaw);
         if ("IN_PROGRESS".equals(existing.status())) {
+            metrics.incrementIdempotencyConflict();
             writeJson(response, 409, "idempotency_conflict", "A request with this Idempotency-Key is already being processed. Retry shortly.");
             return;
         }
         if (!existing.requestHash().equals(requestHash)) {
+            metrics.incrementIdempotencyConflict();
             writeJson(response, 422, "idempotency_key_reused", "This Idempotency-Key was already used with a different request body.");
             return;
         }
 
+        metrics.incrementIdempotencyHit();
         response.setStatus(existing.responseStatus());
         response.setContentType("application/json");
         response.getWriter().write(existing.responseBody());

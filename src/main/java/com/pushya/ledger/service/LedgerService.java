@@ -6,6 +6,7 @@ import com.pushya.ledger.domain.PaymentIntent;
 import com.pushya.ledger.repository.LedgerEntryRepository;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -22,5 +23,9 @@ public class LedgerService {
                 LedgerEntryType.DEBIT, paymentIntent.getAmountMinor(), paymentIntent.getCurrency(), now));
         ledgerEntryRepository.save(new LedgerEntry(UUID.randomUUID(), paymentIntent.getId(), "platform:settlement",
                 LedgerEntryType.CREDIT, paymentIntent.getAmountMinor(), paymentIntent.getCurrency(), now));
+    }
+
+    public List<LedgerEntry> findByPaymentIntentId(UUID paymentIntentId) {
+        return ledgerEntryRepository.findByPaymentIntentId(paymentIntentId);
     }
 }

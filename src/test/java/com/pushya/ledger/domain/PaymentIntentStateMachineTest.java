@@ -13,6 +13,8 @@ class PaymentIntentStateMachineTest {
                 .doesNotThrowAnyException();
         assertThatCode(() -> PaymentIntentStateMachine.assertTransition(PaymentIntentStatus.PROCESSING, PaymentIntentStatus.FAILED))
                 .doesNotThrowAnyException();
+        assertThatCode(() -> PaymentIntentStateMachine.assertTransition(PaymentIntentStatus.REQUIRES_CONFIRMATION, PaymentIntentStatus.CANCELLED))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -20,6 +22,16 @@ class PaymentIntentStateMachineTest {
         assertThatThrownBy(() -> PaymentIntentStateMachine.assertTransition(PaymentIntentStatus.REQUIRES_CONFIRMATION, PaymentIntentStatus.SUCCEEDED))
                 .isInstanceOf(IllegalStateTransitionException.class);
         assertThatThrownBy(() -> PaymentIntentStateMachine.assertTransition(PaymentIntentStatus.SUCCEEDED, PaymentIntentStatus.FAILED))
+                .isInstanceOf(IllegalStateTransitionException.class);
+    }
+
+    @Test
+    void rejectsCancelFromTerminalStates() {
+        assertThatThrownBy(() -> PaymentIntentStateMachine.assertTransition(PaymentIntentStatus.SUCCEEDED, PaymentIntentStatus.CANCELLED))
+                .isInstanceOf(IllegalStateTransitionException.class);
+        assertThatThrownBy(() -> PaymentIntentStateMachine.assertTransition(PaymentIntentStatus.FAILED, PaymentIntentStatus.CANCELLED))
+                .isInstanceOf(IllegalStateTransitionException.class);
+        assertThatThrownBy(() -> PaymentIntentStateMachine.assertTransition(PaymentIntentStatus.CANCELLED, PaymentIntentStatus.PROCESSING))
                 .isInstanceOf(IllegalStateTransitionException.class);
     }
 }

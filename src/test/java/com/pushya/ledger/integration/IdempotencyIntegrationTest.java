@@ -1,16 +1,17 @@
 package com.pushya.ledger.integration;
 
+import com.pushya.ledger.TestcontainersConfiguration;
 import com.pushya.ledger.domain.LedgerEntry;
 import com.pushya.ledger.domain.LedgerEntryType;
 import com.pushya.ledger.domain.PaymentIntent;
 import com.pushya.ledger.domain.PaymentIntentStatus;
 import com.pushya.ledger.repository.LedgerEntryRepository;
 import com.pushya.ledger.repository.PaymentIntentRepository;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.net.URI;
@@ -32,48 +33,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test for idempotency behavior under concurrent load.
- * Requires docker-compose services to be running:
- *   docker compose up -d
- * Then run:
- *   ./mvnw verify -Pintegration
+ * Uses Testcontainers for PostgreSQL and Redis — no external services required.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Import(TestcontainersConfiguration.class)
 @TestPropertySource(properties = {
-        "spring.flyway.enabled=true",
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.datasource.url=jdbc:postgresql://localhost:5432/ledger",
-        "spring.datasource.username=ledger",
-        "spring.datasource.password=ledger",
-        "spring.redis.host=localhost",
-        "spring.redis.port=6379",
-        "ledger.idempotency.claim-ttl-seconds=30",
-        "ledger.idempotency.result-ttl-hours=24"
+        "spring.docker.compose.enabled=false"
 })
 class IdempotencyIntegrationTest {
-
-    @BeforeAll
-    static void checkDockerCompose() {
-        // Check if docker-compose services are available
-        boolean postgresAvailable = isServiceAvailable("localhost", 5432);
-        boolean redisAvailable = isServiceAvailable("localhost", 6379);
-        
-        if (!postgresAvailable || !redisAvailable) {
-            throw new RuntimeException(
-                "Docker Compose services not available. Please run: docker compose up -d\n" +
-                "  Postgres available: " + postgresAvailable + "\n" +
-                "  Redis available: " + redisAvailable
-            );
-        }
-    }
-
-    private static boolean isServiceAvailable(String host, int port) {
-        try (var socket = new java.net.Socket()) {
-            socket.connect(new java.net.InetSocketAddress(host, port), 1000);
-            return true;
-        } catch (Exception ignored) {
-            return false;
-        }
-    }
 
     @LocalServerPort
     int port;

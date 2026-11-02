@@ -6,6 +6,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -30,6 +31,10 @@ public class PaymentIntent {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private Integer version = 0;
 
     protected PaymentIntent() {
     }
@@ -65,6 +70,10 @@ public class PaymentIntent {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Integer getVersion() {
+        return version;
     }
 
     public void setStatus(PaymentIntentStatus status) {

@@ -1,6 +1,6 @@
 @echo off
 REM Idempotent Payment Ledger Service - Integration Test Runner (Windows)
-REM This script helps run integration tests with docker-compose
+REM This script helps run integration tests with docker compose
 
 setlocal enabledelayedexpansion
 
@@ -10,16 +10,16 @@ echo Integration Test Runner
 echo ========================================
 echo.
 
-REM Check if docker-compose is available
-docker-compose version >nul 2>&1
+REM Check if docker compose is available
+docker compose version >nul 2>&1
 if errorlevel 1 (
-    echo Warning: Docker not found. Integration tests require docker-compose.
+    echo Warning: Docker not found. Integration tests require docker compose.
     exit /b 1
 )
 
-REM Start docker-compose services
+REM Start docker compose services
 echo Starting Docker Compose services...
-docker-compose up -d
+docker compose up -d
 
 REM Wait for services to be ready (PostgreSQL on 5432, Redis on 6379)
 echo Waiting for services to be ready...
@@ -66,7 +66,7 @@ echo.
 set /p STOP_SERVICES="Stop Docker Compose services? (y/n) "
 if /i "%STOP_SERVICES%"=="y" (
     echo Stopping Docker Compose services...
-    docker-compose down
+    docker compose down
     echo Services stopped.
 )
 

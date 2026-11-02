@@ -4,5 +4,6 @@ public enum PaymentIntentStatus {
     REQUIRES_CONFIRMATION,
     PROCESSING,
     SUCCEEDED,
-    FAILED
+    FAILED,
+    CANCELLED
 }

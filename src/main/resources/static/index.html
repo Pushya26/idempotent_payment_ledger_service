@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Ledger Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2035;
+            --bg-card-hover: #1f2847;
+            --bg-input: #0f1629;
+            --border: #2a3454;
+            --border-focus: #6366f1;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --info: #3b82f6;
+            --info-bg: rgba(59, 130, 246, 0.1);
+            --cancelled: #8b5cf6;
+            --cancelled-bg: rgba(139, 92, 246, 0.1);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ─── Header ─── */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .header-brand .logo {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        .status-dot.offline { background: var(--danger); animation: none; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ─── Layout ─── */
+        .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+        /* ─── Stats Row ─── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            transition: var(--transition);
+        }
+        .stat-card:hover { border-color: var(--border-focus); transform: translateY(-1px); }
+        .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .stat-value { font-size: 1.75rem; font-weight: 700; }
+        .stat-value.success { color: var(--success); }
+        .stat-value.danger { color: var(--danger); }
+        .stat-value.warning { color: var(--warning); }
+        .stat-value.info { color: var(--info); }
+        .stat-value.cancelled { color: var(--cancelled); }
+
+        /* ─── Actions Panel ─── */
+        .actions-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .actions-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .create-form {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .form-group input, .form-group select {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.6rem 0.85rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+            transition: var(--transition);
+            min-width: 140px;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .form-group input::placeholder { color: var(--text-muted); }
+
+        /* ─── Buttons ─── */
+        .btn {
+            padding: 0.6rem 1.25rem;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, var(--accent-hover), #8b5cf6); transform: translateY(-1px); }
+        .btn-success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .btn-success:hover:not(:disabled) { background: rgba(16, 185, 129, 0.2); }
+        .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.2); }
+        .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-ghost:hover:not(:disabled) { background: var(--bg-card-hover); color: var(--text-primary); }
+        .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.72rem; }
+
+        /* ─── Filter Bar ─── */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .filter-chip {
+            padding: 0.4rem 0.9rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+        .filter-chip:hover { border-color: var(--accent); color: var(--text-primary); }
+        .filter-chip.active {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+
+        /* ─── Table ─── */
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .table-title { font-size: 0.9rem; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 600;
+            background: rgba(0,0,0,0.15);
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 0.85rem 1.5rem;
+            font-size: 0.82rem;
+            border-bottom: 1px solid rgba(42, 52, 84, 0.5);
+            vertical-align: middle;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(99, 102, 241, 0.03); }
+        .id-cell {
+            font-family: 'SFMono-Regular', 'Consolas', monospace;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+        }
+        .amount-cell { font-weight: 600; font-variant-numeric: tabular-nums; }
+        .currency-cell {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .time-cell { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* ─── Status Badges ─── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 0.25rem 0.65rem;
+            border-radius: 100px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .badge-REQUIRES_CONFIRMATION { background: var(--warning-bg); color: var(--warning); }
+        .badge-REQUIRES_CONFIRMATION .badge-dot { background: var(--warning); }
+        .badge-PROCESSING { background: var(--info-bg); color: var(--info); }
+        .badge-PROCESSING .badge-dot { background: var(--info); }
+        .badge-SUCCEEDED { background: var(--success-bg); color: var(--success); }
+        .badge-SUCCEEDED .badge-dot { background: var(--success); }
+        .badge-FAILED { background: var(--danger-bg); color: var(--danger); }
+        .badge-FAILED .badge-dot { background: var(--danger); }
+        .badge-CANCELLED { background: var(--cancelled-bg); color: var(--cancelled); }
+        .badge-CANCELLED .badge-dot { background: var(--cancelled); }
+
+        /* ─── Pagination ─── */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.85rem 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+        .pagination-controls { display: flex; gap: 0.5rem; }
+
+        /* ─── Toast ─── */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.85rem 1.25rem;
+            font-size: 0.8rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+            max-width: 380px;
+        }
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.error { border-left: 3px solid var(--danger); }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(40px); }
+        }
+
+        /* ─── Detail Modal ─── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 560px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+            animation: modalIn 0.25s ease-out;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-header h3 { font-size: 0.95rem; font-weight: 600; }
+        .modal-close {
+            background: none; border: none; color: var(--text-muted); cursor: pointer;
+            font-size: 1.2rem; padding: 4px 8px; border-radius: 6px;
+            transition: var(--transition);
+        }
+        .modal-close:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .modal-body { padding: 1.5rem; }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.65rem 0;
+            border-bottom: 1px solid rgba(42,52,84,0.3);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { font-size: 0.78rem; color: var(--text-muted); }
+        .detail-value { font-size: 0.82rem; font-weight: 500; text-align: right; }
+        .detail-value.mono {
+            font-family: 'SFMono-Regular', 'Consolas', monospace;
+            font-size: 0.72rem;
+            word-break: break-all;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ─── Empty state ─── */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+        .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+        .empty-state p { font-size: 0.85rem; }
+
+        /* ─── Spinner ─── */
+        .spinner {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .create-form { flex-direction: column; align-items: stretch; }
+            .form-group input, .form-group select { min-width: auto; }
+            th, td { padding: 0.65rem 0.75rem; }
+            .id-cell { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ─── Header ─── -->
+<header class="header">
+    <div class="header-brand">
+        <div class="logo">₹</div>
+        <span>Payment Ledger</span>
+    </div>
+    <div class="header-status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting…</span>
+    </div>
+</header>
+
+<!-- ─── Main Content ─── -->
+<div class="container">
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="statTotal">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value warning" id="statPending">—</div></div>
+        <div class="stat-card"><div class="stat-label">Succeeded</div><div class="stat-value success" id="statSucceeded">—</div></div>
+        <div class="stat-card"><div class="stat-label">Failed</div><div class="stat-value danger" id="statFailed">—</div></div>
+        <div class="stat-card"><div class="stat-label">Cancelled</div><div class="stat-value cancelled" id="statCancelled">—</div></div>
+    </div>
+
+    <!-- Create Panel -->
+    <div class="actions-panel">
+        <div class="actions-title">⚡ Create Payment Intent</div>
+        <form class="create-form" id="createForm">
+            <div class="form-group">
+                <label for="amount">Amount</label>
+                <input type="number" id="amount" placeholder="e.g. 1500.00" step="0.01" min="0.01" required>
+            </div>
+            <div class="form-group">
+                <label for="currency">Currency</label>
+                <select id="currency">
+                    <option value="INR">INR</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" id="createBtn">
+                Create Intent
+            </button>
+        </form>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <button class="filter-chip active" data-status="">All</button>
+        <button class="filter-chip" data-status="REQUIRES_CONFIRMATION">Pending</button>
+        <button class="filter-chip" data-status="SUCCEEDED">Succeeded</button>
+        <button class="filter-chip" data-status="FAILED">Failed</button>
+        <button class="filter-chip" data-status="CANCELLED">Cancelled</button>
+        <div style="flex:1;"></div>
+        <button class="btn btn-ghost btn-sm" id="refreshBtn" title="Refresh">↻ Refresh</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <div class="table-header">
+            <span class="table-title" id="tableTitle">Payment Intents</span>
+        </div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Amount</th>
+                        <th>Currency</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="6"><div class="empty-state"><div class="icon">📄</div><p>Loading payment intents…</p></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination" id="pagination" style="display:none;">
+            <span id="pageInfo"></span>
+            <div class="pagination-controls">
+                <button class="btn btn-ghost btn-sm" id="prevBtn" disabled>← Prev</button>
+                <button class="btn btn-ghost btn-sm" id="nextBtn" disabled>Next →</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Toast Container ─── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ─── Detail Modal ─── -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Payment Intent</h3>
+            <button class="modal-close" id="modalClose">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-actions" id="modalActions"></div>
+    </div>
+</div>
+
+<script>
+const API = window.location.origin + '/v1/payment_intents';
+let currentPage = 0;
+let currentFilter = '';
+let totalPages = 0;
+let apiOnline = false;
+
+// ─── API helpers ───
+async function api(url, opts = {}) {
+    const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...opts.headers },
+        ...opts
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || body.message || `HTTP ${res.status}`);
+    }
+    return res.status === 204 ? null : res.json();
+}
+
+function formatAmount(minorUnits, currency) {
+    const major = (minorUnits / 100).toFixed(2);
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 2
+    }).format(major);
+}
+
+function formatTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now - d;
+    if (diffMs < 60000) return 'just now';
+    if (diffMs < 3600000) return `${Math.floor(diffMs/60000)}m ago`;
+    if (diffMs < 86400000) return `${Math.floor(diffMs/3600000)}h ago`;
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatFullTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-IN', {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+}
+
+function statusLabel(s) {
+    const map = { REQUIRES_CONFIRMATION: 'Pending', PROCESSING: 'Processing', SUCCEEDED: 'Succeeded', FAILED: 'Failed', CANCELLED: 'Cancelled' };
+    return map[s] || s;
+}
+
+function badgeHtml(status) {
+    return `<span class="badge badge-${status}"><span class="badge-dot"></span>${statusLabel(status)}</span>`;
+}
+
+// ─── Toast ───
+function toast(message, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span>${type === 'success' ? '✓' : '✗'}</span><span>${message}</span>`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => { el.style.animation = 'slideOut 0.3s ease-in forwards'; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// ─── Health Check ───
+async function checkHealth() {
+    try {
+        const res = await fetch(window.location.origin + '/actuator/health', { signal: AbortSignal.timeout(3000) });
+        apiOnline = res.ok;
+    } catch { apiOnline = false; }
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    dot.className = apiOnline ? 'status-dot' : 'status-dot offline';
+    text.textContent = apiOnline ? 'API Online' : 'API Offline';
+}
+
+// ─── Load Data ───
+async function loadPayments() {
+    try {
+        let url = `${API}?page=${currentPage}&size=15`;
+        if (currentFilter) url += `&status=${currentFilter}`;
+        const data = await api(url);
+        renderTable(data);
+        renderPagination(data);
+        updateStats();
+    } catch (err) {
+        document.getElementById('tableBody').innerHTML =
+            `<tr><td colspan="6"><div class="empty-state"><div class="icon">⚠️</div><p>${err.message}</p></div></td></tr>`;
+    }
+}
+
+async function updateStats() {
+    try {
+        const all = await api(`${API}?page=0&size=1`);
+        document.getElementById('statTotal').textContent = all.totalElements ?? 0;
+
+        const counts = { REQUIRES_CONFIRMATION: 0, SUCCEEDED: 0, FAILED: 0, CANCELLED: 0 };
+        for (const status of Object.keys(counts)) {
+            try {
+                const r = await api(`${API}?status=${status}&page=0&size=1`);
+                counts[status] = r.totalElements ?? 0;
+            } catch { /* ignore */ }
+        }
+        document.getElementById('statPending').textContent = counts.REQUIRES_CONFIRMATION;
+        document.getElementById('statSucceeded').textContent = counts.SUCCEEDED;
+        document.getElementById('statFailed').textContent = counts.FAILED;
+        document.getElementById('statCancelled').textContent = counts.CANCELLED;
+    } catch { /* ignore */ }
+}
+
+function renderTable(data) {
+    const tbody = document.getElementById('tableBody');
+    const items = data.content || [];
+    if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📭</div><p>No payment intents found</p></div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = items.map(p => `
+        <tr>
+            <td class="id-cell" title="${p.id}">${p.id.substring(0, 8)}…</td>
+            <td class="amount-cell">${formatAmount(p.amountMinor, p.currency)}</td>
+            <td class="currency-cell">${p.currency}</td>
+            <td>${badgeHtml(p.status)}</td>
+            <td class="time-cell">${formatTime(p.createdAt)}</td>
+            <td>
+                <div style="display:flex;gap:6px;">
+                    <button class="btn btn-ghost btn-sm" onclick="showDetail('${p.id}')">View</button>
+                    ${p.status === 'REQUIRES_CONFIRMATION' ? `
+                        <button class="btn btn-success btn-sm" onclick="confirmIntent('${p.id}')">Confirm</button>
+                        <button class="btn btn-danger btn-sm" onclick="cancelIntent('${p.id}')">Cancel</button>
+                    ` : ''}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderPagination(data) {
+    const pg = document.getElementById('pagination');
+    totalPages = data.totalPages || 0;
+    if (totalPages <= 1) { pg.style.display = 'none'; return; }
+    pg.style.display = 'flex';
+    document.getElementById('pageInfo').textContent = `Page ${currentPage + 1} of ${totalPages} · ${data.totalElements} total`;
+    document.getElementById('prevBtn').disabled = currentPage === 0;
+    document.getElementById('nextBtn').disabled = currentPage >= totalPages - 1;
+    document.getElementById('tableTitle').textContent = `Payment Intents (${data.totalElements})`;
+}
+
+// ─── Actions ───
+async function confirmIntent(id) {
+    try {
+        const key = crypto.randomUUID();
+        await api(`${API}/${id}/confirm`, {
+            method: 'POST',
+            headers: { 'Idempotency-Key': key }
+        });
+        toast('Payment confirmed successfully');
+        loadPayments();
+    } catch (err) { toast(err.message, 'error'); }
+}
+
+async function cancelIntent(id) {
+    try {
+        const key = crypto.randomUUID();
+        await api(`${API}/${id}/cancel`, {
+            method: 'POST',
+            headers: { 'Idempotency-Key': key }
+        });
+        toast('Payment cancelled');
+        loadPayments();
+    } catch (err) { toast(err.message, 'error'); }
+}
+
+async function showDetail(id) {
+    try {
+        const p = await api(`${API}/${id}`);
+        const body = document.getElementById('modalBody');
+        body.innerHTML = `
+            <div class="detail-row"><span class="detail-label">ID</span><span class="detail-value mono">${p.id}</span></div>
+            <div class="detail-row"><span class="detail-label">Amount</span><span class="detail-value">${formatAmount(p.amountMinor, p.currency)}</span></div>
+            <div class="detail-row"><span class="detail-label">Currency</span><span class="detail-value">${p.currency}</span></div>
+            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${badgeHtml(p.status)}</span></div>
+            <div class="detail-row"><span class="detail-label">Created</span><span class="detail-value">${formatFullTime(p.createdAt)}</span></div>
+            <div class="detail-row"><span class="detail-label">Updated</span><span class="detail-value">${formatFullTime(p.updatedAt)}</span></div>
+        `;
+        const actions = document.getElementById('modalActions');
+        if (p.status === 'REQUIRES_CONFIRMATION') {
+            actions.innerHTML = `
+                <button class="btn btn-success" onclick="confirmIntent('${p.id}');closeModal();">✓ Confirm</button>
+                <button class="btn btn-danger" onclick="cancelIntent('${p.id}');closeModal();">✗ Cancel</button>
+            `;
+        } else {
+            actions.innerHTML = '';
+        }
+        document.getElementById('modalOverlay').classList.add('active');
+    } catch (err) { toast(err.message, 'error'); }
+}
+
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+
+// ─── Events ───
+document.getElementById('createForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('createBtn');
+    const amount = parseFloat(document.getElementById('amount').value);
+    const currency = document.getElementById('currency').value;
+    if (!amount || amount <= 0) { toast('Enter a valid amount', 'error'); return; }
+    const amountMinor = Math.round(amount * 100);
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Creating…';
+    try {
+        await api(API, {
+            method: 'POST',
+            body: JSON.stringify({ amountMinor, currency })
+        });
+        toast(`Payment intent created: ${currency} ${amount.toFixed(2)}`);
+        document.getElementById('amount').value = '';
+        loadPayments();
+    } catch (err) { toast(err.message, 'error'); }
+    finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Create Intent';
+    }
+});
+
+document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentFilter = chip.dataset.status;
+        currentPage = 0;
+        loadPayments();
+    });
+});
+
+document.getElementById('prevBtn').addEventListener('click', () => { if (currentPage > 0) { currentPage--; loadPayments(); } });
+document.getElementById('nextBtn').addEventListener('click', () => { if (currentPage < totalPages - 1) { currentPage++; loadPayments(); } });
+document.getElementById('refreshBtn').addEventListener('click', loadPayments);
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+// ─── Init ───
+checkHealth();
+loadPayments();
+setInterval(checkHealth, 15000);
+setInterval(loadPayments, 30000);
+</script>
+</body>
+</html>
